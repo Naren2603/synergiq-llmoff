@@ -12,6 +12,11 @@ def ollama_chat(prompt: str, *, system: str = "", temperature: float = 0.2) -> s
         "options": {"temperature": temperature},
     }
     r = requests.post(url, json=payload, timeout=300)
-    r.raise_for_status()
+    try:
+        r.raise_for_status()
+    except requests.HTTPError as e:
+        # Print Ollama's actual error body to your terminal
+        raise requests.HTTPError(f"{e}\nOllama response: {r.text}") from e
+
     data = r.json()
     return (data.get("message") or {}).get("content", "").strip()
