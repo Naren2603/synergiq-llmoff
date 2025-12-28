@@ -1,22 +1,30 @@
-from app.core.ollama_client import ollama_chat
-from app.core.config import SUMMARY_MAP_CHARS
+from __future__ import annotations
+
+import os
+from typing import List, Literal
+
+from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 
-def summarize_map_reduce(full_text: str) -> str:
-    text = (full_text or "").strip()
-    if not text:
-        return ""
+SummaryMode = Literal["brief", "detailed"]
 
-    system = "You are a precise academic summarizer. Do not add facts not present in the text."
 
-    parts = []
-    for i in range(0, len(text), SUMMARY_MAP_CHARS):
-        chunk = text[i : i + SUMMARY_MAP_CHARS]
-        prompt = f"""Summarize this chunk into 8-12 bullet points.\nKeep it factual and concise.\n\nCHUNK:\n{chunk}\n"""
-        parts.append(ollama_chat(prompt, system=system, temperature=0.2))
+def _splitter_for_mode(mode: SummaryMode) -> RecursiveCharacterTextSplitter:
+    # Smaller chunks for long docs; can be tuned via env.
+    chunk_size = int(os.getenv("CHUNK_SIZE", "1200"))
+    chunk_overlap = int(os.getenv("CHUNK_OVERLAP", "200"))
+    if mode == "brief":
+        chunk_size = max(600, chunk_size // 2)
+        chunk_overlap = max(100, chunk_overlap // 2)
+    return RecursiveCharacterTextSplitter(chunk_size=chunk_size, chunk_overlap=chunk_overlap)
 
-    combined = "\n".join(parts)
 
-    reduce_prompt = f"""You will receive chunk summaries of a long PDF.\n\nTASK:\n1) Produce a final structured summary with:\n   - Title (guess from content)\n   - 10 key bullet points\n   - 5 important definitions/formulas (if any)\n   - 5 likely exam questions (with short answers)\n\nCHUNK SUMMARIES:\n{combined}\n"""
+def chunk_text(text: str, mode: SummaryMode = "detailed") -> List[str]:
+    return _splitter_for_mode(mode).split_text(text)
 
-    return ollama_chat(reduce_prompt, system=system, temperature=0.2)
+
+def map_target_chars(mode: SummaryMode) -> int:
+    base = int(os.getenv("SUMMARY_MAP_CHARS", "6000"))
+    if mode == "brief":
+        return max(2500, base // 2)
+    return base
