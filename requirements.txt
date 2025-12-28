@@ -1,0 +1,17 @@
+fastapi
+uvicorn
+python-multipart
+python-dotenv
+pydantic
+pypdf
+langchain
+langchain-community
+langchain-text-splitters
+faiss-cpu
+sentence-transformers
+requests
+edge-tts
+gtts
+pillow
+opencv-python
+numpy
