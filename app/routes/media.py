@@ -65,7 +65,7 @@ def get_video(doc_id: str):
         doc["summary"] = summarize_map_reduce(doc["text"])
 
     if not doc.get("video_path") or not os.path.exists(doc["video_path"]):
-        text = doc[["summary"]]
+        text = doc["summary"]
         out = tempfile.NamedTemporaryFile(delete=False, suffix=".mp4")
         out.close()
 
