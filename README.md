@@ -1,6 +1,6 @@
 # synergiq-llmoff
 
-Offline LLM (Ollama) + offline embeddings (SentenceTransformers) PDF pipeline with FastAPI:
+Offline LLM (Ollama) + embeddings (OllamaEmbeddings) PDF pipeline with FastAPI:
 - Upload PDF
 - Chat (RAG with FAISS)
 - Summarize (map-reduce with LLM)

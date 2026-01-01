@@ -7,12 +7,13 @@ from langchain_community.vectorstores import FAISS
 from langchain_community.embeddings import OllamaEmbeddings
 
 from app.core.storage import index_dir
+from app.core.config import OLLAMA_BASE_URL, EMBED_MODEL
 
 
 def _embeddings() -> OllamaEmbeddings:
-    base_url = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
-    model = os.getenv("OLLAMA_MODEL", "llama3.1")
-    return OllamaEmbeddings(base_url=base_url, model=model)
+    # Keep chat and embedding models configurable separately.
+    # If EMBED_MODEL isn't set, config falls back to OLLAMA_MODEL.
+    return OllamaEmbeddings(base_url=OLLAMA_BASE_URL, model=EMBED_MODEL)
 
 
 def persist_faiss(doc_id: str, vs: FAISS) -> str:
