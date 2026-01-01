@@ -13,3 +13,7 @@ python-multipart
 pytesseract
 pdf2image
 Pillow
+gtts
+edge-tts
+opencv-python
+moviepy
