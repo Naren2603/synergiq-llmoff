@@ -9,11 +9,25 @@ from app.core.summarize import chunk_text, SummaryMode
 def summarize_chunk(chunk: str, mode: SummaryMode = "detailed") -> str:
     """Summarize a single chunk of text using LLM."""
     if mode == "brief":
-        system = "You are a helpful assistant that creates brief, concise summaries."
-        prompt = f"Provide a brief summary (2-3 sentences) of the following text:\n\n{chunk}"
+        system = (
+            "You create brief, concise summaries in plain text. "
+            "Do NOT use markdown (no headings, bullets, **bold**, ###, etc.)."
+        )
+        prompt = (
+            "Provide a brief summary (3-5 sentences) of the following text. "
+            "Write in full sentences as a single paragraph.\n\n"
+            f"{chunk}"
+        )
     else:
-        system = "You are a helpful assistant that creates detailed summaries."
-        prompt = f"Provide a detailed summary of the following text, capturing key points and important details:\n\n{chunk}"
+        system = (
+            "You create detailed summaries in plain text. "
+            "Do NOT use markdown (no headings, bullets, **bold**, ###, etc.)."
+        )
+        prompt = (
+            "Provide a detailed summary of the following text, capturing key points and important details. "
+            "Write in plain text with flowing paragraphs. Avoid lists/bullets unless strictly necessary.\n\n"
+            f"{chunk}"
+        )
     
     try:
         return ollama_chat(prompt, system=system, temperature=0.3)
@@ -76,7 +90,10 @@ Combine them into one detailed, coherent summary that captures all key points:
 
 {combined}"""
         
-        system = "You are a helpful assistant that synthesizes multiple summaries into a coherent whole."
+        system = (
+            "You synthesize multiple summaries into a coherent whole in plain text. "
+            "Do NOT use markdown (no headings, bullets, **bold**, ###, etc.)."
+        )
         try:
             final_summary = ollama_chat(reduce_prompt, system=system, temperature=0.3)
             return final_summary

@@ -6,6 +6,8 @@ import os
 from pathlib import Path
 from typing import Optional
 
+from app.core.text_clean import to_speech_text
+
 
 def generate_audio_gtts(text: str, output_path: str, lang: str = "en") -> bool:
     """Generate audio using gTTS (Google Text-to-Speech) - fallback option."""
@@ -59,6 +61,9 @@ def generate_audio(text: str, output_path: str, use_edge: bool = True) -> Option
     if not text or not text.strip():
         print("Empty text provided for TTS")
         return None
+
+    # Clean up markdown-like artifacts and improve flow for speech
+    text = to_speech_text(text)
     
     # Ensure output directory exists
     Path(output_path).parent.mkdir(parents=True, exist_ok=True)

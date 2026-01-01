@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import time
 from typing import List, Optional
 
 from langchain_community.vectorstores import FAISS
@@ -36,9 +37,18 @@ def build_or_load_index(doc_id: str, texts: List[str], metadatas: Optional[List[
     existing = load_faiss(doc_id)
     if existing is not None:
         return existing
-    vs = FAISS.from_texts(texts=texts, embedding=_embeddings(), metadatas=metadatas)
-    persist_faiss(doc_id, vs)
-    return vs
+
+    last_err: Exception | None = None
+    # Ollama can occasionally drop connections under load; retry with backoff.
+    for attempt in range(1, 4):
+        try:
+            vs = FAISS.from_texts(texts=texts, embedding=_embeddings(), metadatas=metadatas)
+            persist_faiss(doc_id, vs)
+            return vs
+        except Exception as e:
+            last_err = e
+            time.sleep(1.5 * attempt)
+    raise RuntimeError(f"Failed to build FAISS index after retries: {last_err}")
 
 
 def build_vectorstore(pages: List[dict], doc_id: str) -> tuple[FAISS, List[dict]]:

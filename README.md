@@ -361,6 +361,21 @@ uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 3. Upload a PDF via `/media/upload`
 4. Use the returned `doc_id` for other endpoints
 
+## Benchmarking (IEEE graphs)
+
+Generate CSV + PNG graphs (time vs pages, stage breakdown, index size vs pages) for a folder of PDFs:
+
+```bash
+pip install -r requirements.txt
+python -m eval.benchmark "path/to/pdf_folder" --out "eval/out" --summary
+```
+
+Notes:
+- `--summary` includes summarization timing (requires Ollama model). Without it, the benchmark runs extraction/OCR + indexing only.
+- Outputs:
+  - `eval/out/results.csv`
+  - `eval/out/plots/*.png`
+
 ## License
 
 MIT (or as per repository license)

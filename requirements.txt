@@ -17,3 +17,4 @@ gtts
 edge-tts
 opencv-python
 moviepy
+matplotlib

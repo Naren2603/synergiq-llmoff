@@ -12,7 +12,7 @@ class ChatRequest(BaseModel):
     question: str
 
 
-@router.post("/chat")
+@router.post("/chat", include_in_schema=False)
 def chat(req: ChatRequest):
     doc = DOCS.get(req.doc_id)
     if not doc:

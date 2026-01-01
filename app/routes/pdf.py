@@ -8,7 +8,7 @@ from app.core.rag import build_vectorstore
 router = APIRouter()
 
 
-@router.post("/upload_pdf")
+@router.post("/upload_pdf", include_in_schema=False)
 async def upload_pdf(file: UploadFile = File(...)):
     if not file.filename.lower().endswith(".pdf"):
         raise HTTPException(status_code=400, detail="Only PDF files are supported.")

@@ -6,6 +6,8 @@ from pathlib import Path
 from typing import Optional, List
 import textwrap
 
+from app.core.text_clean import to_display_text
+
 
 def generate_video_with_opencv(
     text: str,
@@ -181,5 +183,7 @@ def generate_video(
     if not text or not text.strip():
         print("Empty text provided for video generation")
         return None
+
+    text = to_display_text(text)
     
     return generate_video_with_opencv(text, output_path, audio_path)
