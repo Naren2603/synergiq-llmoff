@@ -42,8 +42,10 @@ async def upload_pdf(file: UploadFile = File(...)):
     }
     save_doc_meta(doc_id, meta)
 
-    save_status(doc_id, {"state": "ready", "num_pages": num_pages})
-    return meta
+    if not doc.get("video_path") or not os.path.exists(doc["video_path"]):
+        text = doc["summary"]
+        out = tempfile.NamedTemporaryFile(delete=False, suffix=".mp4")
+        out.close()
 
 
 @router.get("/status/{doc_id}")
