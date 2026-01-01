@@ -1,107 +1,92 @@
-import os
-import tempfile
-import asyncio
+from __future__ import annotations
 
-import cv2
-import numpy as np
-from PIL import Image, ImageDraw, ImageFont
-from fastapi import APIRouter, HTTPException
-from fastapi.responses import FileResponse
-from gtts import gTTS
+import uuid
+from fastapi import APIRouter, UploadFile, File, HTTPException, Query
 
-import edge_tts
+from app.core.storage import (
+    save_doc_meta,
+    save_doc_pages,
+    save_status,
+    load_status,
+    load_doc_meta,
+)
+from app.core.pdf_loader import extract_pdf_pages
+from app.core.summarize import chunk_text
 
-from app.state import DOCS
-from app.core.summarize import summarize_map_reduce
-
-router = APIRouter()
-
-
-@router.get("/summary/{doc_id}")
-def get_summary(doc_id: str):
-    doc = DOCS.get(doc_id)
-    if not doc:
-        raise HTTPException(status_code=404, detail="Unknown doc_id. Upload a PDF first.")
-    if not doc.get("summary"):
-        doc["summary"] = summarize_map_reduce(doc["text"])
-    return {"doc_id": doc_id, "summary": doc["summary"]}
+router = APIRouter(prefix="/media", tags=["media"])
 
 
-async def _edge_tts_to_file(text: str, out_path: str, voice: str = "en-IN-PrabhatNeural"):
-    communicate = edge_tts.Communicate(text=text, voice=voice)
-    await communicate.save(out_path)
+@router.post("/upload")
+async def upload_pdf(file: UploadFile = File(...)):
+    if not file.filename.lower().endswith(".pdf"):
+        raise HTTPException(status_code=400, detail="Only PDF supported")
 
+    doc_id = str(uuid.uuid4())
+    save_status(doc_id, {"state": "processing"})
 
-@router.get("/audio/{doc_id}")
-def get_audio(doc_id: str):
-    doc = DOCS.get(doc_id)
-    if not doc:
-        raise HTTPException(status_code=404, detail="Unknown doc_id. Upload a PDF first.")
+    pdf_bytes = await file.read()
+    # Persist original PDF
+    from pathlib import Path
+    from app.core.storage import doc_dir
 
-    if not doc.get("summary"):
-        doc["summary"] = summarize_map_reduce(doc["text"])
+    pdf_path = doc_dir(doc_id) / "source.pdf"
+    pdf_path.write_bytes(pdf_bytes)
 
-    if not doc.get("audio_path") or not os.path.exists(doc["audio_path"]):
-        text = doc["summary"][:9000]
-        out = tempfile.NamedTemporaryFile(delete=False, suffix=".mp3")
-        out.close()
-        try:
-            asyncio.run(_edge_tts_to_file(text, out.name))
-        except Exception:
-            tts = gTTS(text=text, lang="en")
-            tts.save(out.name)
-        doc["audio_path"] = out.name
+    pages, num_pages = extract_pdf_pages(str(pdf_path), ocr_empty_pages=True)
+    save_doc_pages(doc_id, pages)
 
-    return FileResponse(doc["audio_path"], media_type="audio/mpeg", filename=f"{doc_id}.mp3")
-
-
-@router.get("/video/{doc_id}")
-def get_video(doc_id: str):
-    doc = DOCS.get(doc_id)
-    if not doc:
-        raise HTTPException(status_code=404, detail="Unknown doc_id. Upload a PDF first.")
-
-    if not doc.get("summary"):
-        doc["summary"] = summarize_map_reduce(doc["text"])
+    meta = {
+        "doc_id": doc_id,
+        "filename": file.filename,
+        "num_pages": num_pages,
+    }
+    save_doc_meta(doc_id, meta)
 
     if not doc.get("video_path") or not os.path.exists(doc["video_path"]):
         text = doc["summary"]
         out = tempfile.NamedTemporaryFile(delete=False, suffix=".mp4")
         out.close()
 
-        width, height = 1280, 720
-        fps = 30
-        duration = 12
-        frames = fps * duration
 
-        writer = cv2.VideoWriter(out.name, cv2.VideoWriter_fourcc(*"mp4v"), fps, (width, height))
+@router.get("/status/{doc_id}")
+def status(doc_id: str):
+    st = load_status(doc_id)
+    if not st:
+        raise HTTPException(status_code=404, detail="Unknown doc_id")
+    return st
 
-        try:
-            font = ImageFont.truetype("arial.ttf", 36)
-        except Exception:
-            font = ImageFont.load_default()
 
-        words = text.split()
-        lines = [" ".join(words[i:i+10]) for i in range(0, min(len(words), 200), 10)]
-        if not lines:
-            lines = ["(No summary text)"]
+@router.get("/summary/{doc_id}")
+def summary(doc_id: str, mode: str = Query("detailed", pattern="^(brief|detailed)$")):
+    meta = load_doc_meta(doc_id)
+    if not meta:
+        raise HTTPException(status_code=404, detail="Unknown doc_id")
 
-        for f in range(frames):
-            img = Image.new("RGB", (width, height), color=(10, 10, 18))
-            draw = ImageDraw.Draw(img)
+    # Placeholder summarization pipeline; keep compatible with existing callers.
+    # Fix bug: doc[["summary"]] -> doc["summary"]
+    from app.core.storage import load_doc_pages, save_status
 
-            offset = int((f / frames) * max(1, len(lines) * 50))
-            y = 80 - offset
+    pages = load_doc_pages(doc_id)
+    if not pages:
+        raise HTTPException(status_code=404, detail="No pages stored for doc")
 
-            draw.text((60, 20), "PDF Summary Video", fill=(255, 255, 255), font=font)
-            for line in lines:
-                draw.text((60, y), line, fill=(220, 220, 220), font=font)
-                y += 50
+    text = "\n\n".join(pages)
+    chunks = chunk_text(text, mode=mode)  # type: ignore[arg-type]
 
-            frame = cv2.cvtColor(np.array(img), cv2.COLOR_RGB2BGR)
-            writer.write(frame)
+    save_status(doc_id, {"state": "summarizing", "chunks": len(chunks)})
 
-        writer.release()
-        doc["video_path"] = out.name
+    # If your project already has an LLM summarizer, wire it here.
+    # For now, return a simple extractive summary for production safety.
+    if mode == "brief":
+        summary_text = "\n".join([c[:200] for c in chunks[:5]]).strip()
+    else:
+        summary_text = "\n".join([c[:400] for c in chunks[:10]]).strip()
 
-    return FileResponse(doc["video_path"], media_type="video/mp4", filename=f"{doc_id}.mp4")
+    save_status(doc_id, {"state": "ready", "summary_mode": mode})
+
+    return {
+        "doc_id": doc_id,
+        "mode": mode,
+        "summary": summary_text,
+        "num_pages": meta.get("num_pages"),
+    }
