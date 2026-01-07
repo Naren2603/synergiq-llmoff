@@ -275,8 +275,27 @@ synergiq-llmoff/
 ### 🔊 Audio Generation
 - **edge-tts** (Microsoft Edge TTS) - preferred, high quality
 - **gTTS** (Google TTS) - fallback option
+- **Piper** (offline neural TTS) - optional, fully offline
 - MP3 output format
 - Automatic voice selection
+
+#### Offline human-like voice (Piper + casual narration)
+
+For fully offline, more natural-sounding audio:
+
+1) Install Piper TTS and download a Piper voice model (.onnx)
+2) Set in `.env`:
+
+```env
+TTS_ENGINE=piper
+SPOKEN_STYLE=casual
+PIPER_MODEL=D:\path\to\voice.onnx
+OLLAMA_BASE_URL=http://127.0.0.1:11434
+```
+
+Notes:
+- The pipeline will rewrite summaries into a casual spoken script using your local Ollama model, then synthesize audio via Piper.
+- If `ffmpeg` is installed, Piper audio is converted to MP3; otherwise it will be served as WAV.
 
 ### 🎬 Video Generation
 - Text-to-video rendering using OpenCV + PIL
@@ -375,6 +394,28 @@ Notes:
 - Outputs:
   - `eval/out/results.csv`
   - `eval/out/plots/*.png`
+
+## Quality Evaluation (IEEE: answer + summary quality)
+
+This repository includes a minimal **quality evaluation** runner that:
+- Executes **No-RAG** vs **RAG** answers for a fixed question set
+- Saves outputs to CSV/JSONL for analysis
+- Generates **human rating templates** (1–5) for correctness/groundedness/citation relevance and summary quality
+
+1) Create your QA spec JSON (start from `eval/qa_example.json`) and place the referenced PDFs in a folder.
+
+2) Run:
+
+```bash
+python -m eval.quality_eval --qa eval/qa_example.json --pdf-dir pdfs/public --out eval/out_quality --k 5 --summary
+```
+
+Outputs:
+- `eval/out_quality/qa_results.csv`
+- `eval/out_quality/qa_results.jsonl`
+- `eval/out_quality/qa_ratings_template.csv`
+- `eval/out_quality/summary_ratings_template.csv`
+- `eval/out_quality/HUMAN_RUBRIC.md`
 
 ## License
 

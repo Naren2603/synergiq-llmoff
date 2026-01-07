@@ -182,15 +182,24 @@ def get_audio(doc_id: str):
     if not meta:
         raise HTTPException(status_code=404, detail="Unknown doc_id")
     
-    audio_path = doc_dir(doc_id) / "audio.mp3"
-    if not audio_path.exists():
-        raise HTTPException(status_code=404, detail="Audio not generated yet. Processing may still be in progress.")
-    
-    return FileResponse(
-        path=str(audio_path),
-        media_type="audio/mpeg",
-        filename=f"{doc_id}_audio.mp3"
-    )
+    audio_mp3 = doc_dir(doc_id) / "audio.mp3"
+    audio_wav = doc_dir(doc_id) / "audio.wav"
+
+    if audio_mp3.exists():
+        return FileResponse(
+            path=str(audio_mp3),
+            media_type="audio/mpeg",
+            filename=f"{doc_id}_audio.mp3",
+        )
+
+    if audio_wav.exists():
+        return FileResponse(
+            path=str(audio_wav),
+            media_type="audio/wav",
+            filename=f"{doc_id}_audio.wav",
+        )
+
+    raise HTTPException(status_code=404, detail="Audio not generated yet. Processing may still be in progress.")
 
 
 @router.get("/video/{doc_id}")

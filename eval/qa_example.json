@@ -1,0 +1,21 @@
+{
+  "description": "Example QA set for synergiq-llmoff quality evaluation. Replace with your own PDFs/questions.",
+  "items": [
+    {
+      "pdf": "sample1.pdf",
+      "doc_id": "optional-stable-id-or-leave-empty",
+      "questions": [
+        {
+          "id": "q1",
+          "question": "What is the main objective of this document?",
+          "expected": "(optional) short expected answer / key points for the evaluator"
+        },
+        {
+          "id": "q2",
+          "question": "List two key findings mentioned in the document.",
+          "expected": "(optional)"
+        }
+      ]
+    }
+  ]
+}
