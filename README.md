@@ -67,10 +67,16 @@ Edit `.env`:
 OLLAMA_MODEL=qwen2.5:7b
 OLLAMA_BASE_URL=http://localhost:11434
 
+# Embeddings for RAG indexing (falls back to OLLAMA_MODEL if unset)
+# EMBED_MODEL=nomic-embed-text
+
 # Summarization / Chunking
 SUMMARY_MAP_CHARS=6000
 CHUNK_SIZE=1200
 CHUNK_OVERLAP=200
+
+# RAG Configuration
+TOP_K=5
 
 # Optional: Tesseract (if using OCR)
 # TESSERACT_CMD=/usr/bin/tesseract
@@ -193,11 +199,22 @@ curl -X POST "http://localhost:8000/media/chat" \
   }'
 ```
 
+No-RAG baseline (for comparison):
+
+```bash
+curl -X POST "http://localhost:8000/media/chat?mode=no_rag" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "doc_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+    "question": "What are the main findings?"
+  }'
+```
+
 **Response:**
 ```json
 {
   "answer": "Based on the document, the main findings are...",
-  "sources": ["p3", "p5", "p7"]
+  "sources": ["p3:c2", "p3:c5", "p7:c1"]
 }
 ```
 
@@ -389,6 +406,12 @@ pip install -r requirements.txt
 python -m eval.benchmark "path/to/pdf_folder" --out "eval/out" --summary
 ```
 
+Include TTS timing (optional):
+
+```bash
+python -m eval.benchmark "path/to/pdf_folder" --out "eval/out" --summary --tts
+```
+
 Notes:
 - `--summary` includes summarization timing (requires Ollama model). Without it, the benchmark runs extraction/OCR + indexing only.
 - Outputs:
@@ -413,9 +436,51 @@ python -m eval.quality_eval --qa eval/qa_example.json --pdf-dir pdfs/public --ou
 Outputs:
 - `eval/out_quality/qa_results.csv`
 - `eval/out_quality/qa_results.jsonl`
+- `eval/out_quality/llmjudge_scores.csv` (if you run LLM-judge below)
 - `eval/out_quality/qa_ratings_template.csv`
 - `eval/out_quality/summary_ratings_template.csv`
+- `eval/out_quality/latency_summary.json`
 - `eval/out_quality/HUMAN_RUBRIC.md`
+
+### Single-command paper run (recommended)
+
+Run everything (QA outputs + LLM-judge + optional benchmark) with one command:
+
+```bash
+python -m eval.run_all --qa eval/qa_example.json --pdf-dir pdfs/public --out eval/out_paper --k 5 --seed 1337 --summary --benchmark
+```
+
+It produces:
+- `eval/out_paper/run_meta.json` (run_id, timestamp, models, chunking settings)
+- `eval/out_paper/qa_results.csv`
+- `eval/out_paper/llmjudge_scores.csv`
+- `eval/out_paper/qa_ratings_template.csv`
+- `eval/out_paper/summary_ratings_template.csv`
+- `eval/out_paper/latency_summary.json`
+- `eval/out_paper/benchmark/results.csv` + `eval/out_paper/benchmark/plots/*.png`
+
+If you want benchmark plots to include TTS time, add `--benchmark-tts`.
+
+```bash
+python -m eval.run_all --qa eval/qa_example.json --pdf-dir pdfs/public --out eval/out_paper --k 5 --seed 1337 --summary --benchmark --benchmark-tts
+```
+
+### Ablation sweep (chunking + top-k)
+
+Run a parameter sweep over `CHUNK_SIZE`, `CHUNK_OVERLAP`, and `TOP_K` and write a single CSV for paper tables/plots:
+
+```bash
+python -m eval.ablation --qa eval/qa_example.json --pdf-dir pdfs/public --out eval/out_ablation
+```
+
+Outputs:
+- `eval/out_ablation/ablation_results.csv`
+- `eval/out_ablation/cs*_co*_k*/` (per-run folders with `run_meta.json`, `qa_results.csv`, `llmjudge_scores.csv`, etc.)
+
+### Citation format
+
+RAG citations are returned in the format `p{page}:c{chunk}` (example: `p3:c2|p3:c5|p7:c1`).
+They are derived from the **top-k retrieved chunks actually provided to the LLM**, de-duplicated in retrieval order.
 
 ## License
 
@@ -424,6 +489,6 @@ MIT (or as per repository license)
 ## Notes
 
 - For long PDFs, summarization uses chunked map-reduce to avoid context overflow.
-- Chat answers are grounded in retrieved evidence with page citations like `[p12]`.
+- `/media/chat` answers are grounded in retrieved evidence with citations like `p{page}:c{chunk}`.
 - All processing is done offline except for gTTS fallback (requires internet).
 - Vector embeddings use Ollama's embedding model (same as chat model by default).

@@ -1,19 +1,569 @@
 {
-  "description": "Example QA set for synergiq-llmoff quality evaluation. Replace with your own PDFs/questions.",
+  "description": "QA set for paper evaluation",
   "items": [
     {
-      "pdf": "sample1.pdf",
-      "doc_id": "optional-stable-id-or-leave-empty",
+      "pdf": "ALGORTIHM-SHORT-NOTES-_compressed.pdf",
+      "doc_id": "algo-notes",
       "questions": [
         {
-          "id": "q1",
-          "question": "What is the main objective of this document?",
-          "expected": "(optional) short expected answer / key points for the evaluator"
+          "id": "algo_q1",
+          "question": "What is the main objective of algorithm analysis?",
+          "expected": [
+            "Compare algorithms based on efficiency",
+            "Measure time and space requirements",
+            "Select the most optimal solution"
+          ]
         },
         {
-          "id": "q2",
-          "question": "List two key findings mentioned in the document.",
-          "expected": "(optional)"
+          "id": "algo_q2",
+          "question": "Differentiate between a priori and a posteriori analysis.",
+          "expected": [
+            "A priori is platform independent",
+            "A posteriori depends on hardware and software",
+            "A priori uses mathematical analysis",
+            "A posteriori uses actual program execution"
+          ]
+        },
+        {
+          "id": "algo_q3",
+          "question": "Define Big-O notation with an example.",
+          "expected": [
+            "Represents asymptotic upper bound",
+            "Describes worst-case complexity",
+            "Ignores constants and lower-order terms"
+          ]
+        },
+        {
+          "id": "algo_q4",
+          "question": "What does Θ-notation represent in asymptotic analysis?",
+          "expected": [
+            "Represents tight bound",
+            "Gives exact order of growth",
+            "Upper and lower bounds are same"
+          ]
+        },
+        {
+          "id": "algo_q5",
+          "question": "Explain Ω-notation and its significance.",
+          "expected": [
+            "Represents asymptotic lower bound",
+            "Describes best-case performance",
+            "Shows minimum time requirement"
+          ]
+        },
+        {
+          "id": "algo_q6",
+          "question": "Why does asymptotic notation not satisfy the trichotomy property?",
+          "expected": [
+            "Functions may not strictly dominate each other",
+            "Oscillating functions violate comparison",
+            "Upper and lower bounds may overlap"
+          ]
+        },
+        {
+          "id": "algo_q7",
+          "question": "Find the time complexity of a single nested loop running n×n times.",
+          "expected": [
+            "Outer loop runs n times",
+            "Inner loop runs n times",
+            "Overall time complexity is O(n²)"
+          ]
+        },
+        {
+          "id": "algo_q8",
+          "question": "What is the time complexity of a loop where the iterator doubles each iteration?",
+          "expected": [
+            "Iterator grows exponentially",
+            "Number of iterations is log₂n",
+            "Time complexity is O(log n)"
+          ]
+        },
+        {
+          "id": "algo_q9",
+          "question": "Write the recurrence relation for a divide-and-conquer algorithm.",
+          "expected": [
+            "Problem divided into subproblems",
+            "General form: T(n) = aT(n/b) + f(n)",
+            "Used in merge sort, binary search"
+          ]
+        },
+        {
+          "id": "algo_q10",
+          "question": "State the Master Theorem and its three cases.",
+          "expected": [
+            "Used to solve divide-and-conquer recurrences",
+            "Case 1: f(n) smaller than n^logb(a)",
+            "Case 2: f(n) equal to n^logb(a)",
+            "Case 3: f(n) larger than n^logb(a)"
+          ]
+        },
+        {
+          "id": "algo_q11",
+          "question": "Solve T(n) = 2T(n/2) + n using Master Theorem.",
+          "expected": [
+            "a = 2, b = 2, f(n) = n",
+            "Falls under Case 2",
+            "Time complexity is O(n log n)"
+          ]
+        },
+        {
+          "id": "algo_q12",
+          "question": "What is meant by time complexity being infinite?",
+          "expected": [
+            "Algorithm never terminates",
+            "Occurs due to infinite loop",
+            "Time complexity is unbounded"
+          ]
+        },
+        {
+          "id": "algo_q13",
+          "question": "Explain mutually exclusive loops with an example.",
+          "expected": [
+            "Only one loop executes at a time",
+            "Loops do not overlap in execution",
+            "Time complexity is max of loops"
+          ]
+        },
+        {
+          "id": "algo_q14",
+          "question": "What is space complexity and how is it different from auxiliary space?",
+          "expected": [
+            "Space complexity includes total memory used",
+            "Auxiliary space excludes input space",
+            "Auxiliary space is extra working memory"
+          ]
+        },
+        {
+          "id": "algo_q15",
+          "question": "Give the time complexity of binary search and justify it.",
+          "expected": [
+            "Array is divided into half each step",
+            "Number of steps is log₂n",
+            "Time complexity is O(log n)"
+          ]
+        }
+      ]
+    },
+    {
+      "pdf": "DATA-STRUCTURE-SHORT-NOTES_compressed.pdf",
+      "doc_id": "ds-notes",
+      "questions": [
+        {
+          "id": "ds_q1",
+          "question": "Define an array and mention two characteristics.",
+          "expected": [
+            "Collection of homogeneous elements",
+            "Stored in contiguous memory",
+            "Supports direct indexing"
+          ]
+        },
+        {
+          "id": "ds_q2",
+          "question": "What is a sparse matrix?",
+          "expected": [
+            "Matrix with more zero elements",
+            "Zero elements > non-zero elements",
+            "Memory-efficient representation"
+          ]
+        },
+        {
+          "id": "ds_q3",
+          "question": "Differentiate between lower and upper triangular matrices.",
+          "expected": [
+            "Lower: elements above diagonal are zero",
+            "Upper: elements below diagonal are zero",
+            "Both must be square matrices"
+          ]
+        },
+        {
+          "id": "ds_q4",
+          "question": "What is a linked list and why is it preferred over arrays?",
+          "expected": [
+            "Nodes linked using pointers",
+            "Dynamic memory allocation",
+            "Efficient insertion and deletion"
+          ]
+        },
+        {
+          "id": "ds_q5",
+          "question": "State two disadvantages of linked lists.",
+          "expected": [
+            "No random access",
+            "Extra memory for pointers"
+          ]
+        },
+        {
+          "id": "ds_q6",
+          "question": "Define stack and list its basic operations.",
+          "expected": [
+            "Linear data structure",
+            "Follows LIFO principle",
+            "Operations: push, pop, peek"
+          ]
+        },
+        {
+          "id": "ds_q7",
+          "question": "Explain the LIFO principle with an example.",
+          "expected": [
+            "Last inserted element removed first",
+            "Stack follows LIFO",
+            "Example: function calls"
+          ]
+        },
+        {
+          "id": "ds_q8",
+          "question": "What are the applications of stack data structure?",
+          "expected": [
+            "Expression evaluation",
+            "Function call management",
+            "Backtracking and undo operations"
+          ]
+        },
+        {
+          "id": "ds_q9",
+          "question": "Define a queue and explain FIFO.",
+          "expected": [
+            "Linear data structure",
+            "Follows FIFO principle",
+            "Insertion at rear, deletion at front"
+          ]
+        },
+        {
+          "id": "ds_q10",
+          "question": "What is the drawback of a simple linear queue?",
+          "expected": [
+            "False overflow occurs",
+            "Unused memory cannot be reused",
+            "Rear reaches end of array"
+          ]
+        },
+        {
+          "id": "ds_q11",
+          "question": "How does a circular queue overcome false overflow?",
+          "expected": [
+            "Rear connects back to front",
+            "Uses modulo arithmetic",
+            "Efficient memory utilization"
+          ]
+        },
+        {
+          "id": "ds_q12",
+          "question": "What is a priority queue?",
+          "expected": [
+            "Elements served based on priority",
+            "Higher priority served first",
+            "Not strictly FIFO"
+          ]
+        },
+        {
+          "id": "ds_q13",
+          "question": "Define a binary tree.",
+          "expected": [
+            "Hierarchical data structure",
+            "Each node has at most two children",
+            "Has root and subtrees"
+          ]
+        },
+        {
+          "id": "ds_q14",
+          "question": "State the property of a Binary Search Tree.",
+          "expected": [
+            "Left subtree < root",
+            "Right subtree > root",
+            "Inorder traversal gives sorted order"
+          ]
+        },
+        {
+          "id": "ds_q15",
+          "question": "Explain the three cases of deletion in a BST.",
+          "expected": [
+            "Leaf node deletion",
+            "Node with one child",
+            "Node with two children using inorder successor/predecessor"
+          ]
+        }
+      ]
+    }
+    ,
+    {
+      "pdf": "Computer-Network--_compressed.pdf",
+      "doc_id": "cn-notes",
+      "questions": [
+        {
+          "id": "cn_q1",
+          "question": "What is the purpose of an IP address?",
+          "expected": [
+            "Uniquely identifies a device",
+            "Identifies network and host",
+            "Used for routing packets"
+          ]
+        },
+        {
+          "id": "cn_q2",
+          "question": "Differentiate between network ID and host ID.",
+          "expected": [
+            "Network ID identifies the network",
+            "Host ID identifies device within network",
+            "Same NID for all devices in network"
+          ]
+        },
+        {
+          "id": "cn_q3",
+          "question": "Explain classful IP addressing.",
+          "expected": [
+            "IP divided into fixed classes",
+            "Classes based on first bits",
+            "Includes Class A to E"
+          ]
+        },
+        {
+          "id": "cn_q4",
+          "question": "List the IP address ranges for Class A, B, and C.",
+          "expected": [
+            "Class A: 1–126",
+            "Class B: 128–191",
+            "Class C: 192–223"
+          ]
+        },
+        {
+          "id": "cn_q5",
+          "question": "What is a limited broadcast address?",
+          "expected": [
+            "Used to reach all hosts in network",
+            "Address is 255.255.255.255",
+            "Used only as destination address"
+          ]
+        },
+        {
+          "id": "cn_q6",
+          "question": "Define subnetting.",
+          "expected": [
+            "Dividing a network into sub-networks",
+            "Borrow bits from host ID",
+            "Improves address utilization"
+          ]
+        },
+        {
+          "id": "cn_q7",
+          "question": "What is CIDR and why is it used?",
+          "expected": [
+            "Classless addressing method",
+            "Uses prefix length /n",
+            "Reduces IP wastage"
+          ]
+        },
+        {
+          "id": "cn_q8",
+          "question": "Explain the concept of supernetting.",
+          "expected": [
+            "Combines multiple networks",
+            "Reduces routing table size",
+            "Borrow bits from network ID"
+          ]
+        },
+        {
+          "id": "cn_q9",
+          "question": "What is error detection?",
+          "expected": [
+            "Detects errors in transmitted data",
+            "Requests retransmission if error found",
+            "Does not correct errors"
+          ]
+        },
+        {
+          "id": "cn_q10",
+          "question": "Define Hamming distance.",
+          "expected": [
+            "Number of differing bit positions",
+            "Measured using XOR operation",
+            "Used in error detection and correction"
+          ]
+        },
+        {
+          "id": "cn_q11",
+          "question": "What is CRC and why is it reliable?",
+          "expected": [
+            "Cyclic Redundancy Check",
+            "Uses polynomial division",
+            "Detects burst errors efficiently"
+          ]
+        },
+        {
+          "id": "cn_q12",
+          "question": "Differentiate between error detection and correction.",
+          "expected": [
+            "Detection finds presence of error",
+            "Correction identifies and fixes error",
+            "Correction avoids retransmission"
+          ]
+        },
+        {
+          "id": "cn_q13",
+          "question": "Define transmission delay.",
+          "expected": [
+            "Time to push packet onto link",
+            "Formula: Td = L / R",
+            "Depends on packet size and rate"
+          ]
+        },
+        {
+          "id": "cn_q14",
+          "question": "Explain Stop-and-Wait protocol.",
+          "expected": [
+            "Sender sends one frame at a time",
+            "Waits for ACK before next frame",
+            "Simple but low efficiency"
+          ]
+        },
+        {
+          "id": "cn_q15",
+          "question": "Compare Go-Back-N and Selective Repeat protocols.",
+          "expected": [
+            "GBN retransmits all frames after error",
+            "SR retransmits only erroneous frame",
+            "SR requires more buffer memory"
+          ]
+        }
+      ]
+    },
+    {
+      "pdf": "C-PROGRAMMING_SHORT_NOTES-_compressed-.pdf",
+      "doc_id": "c-notes",
+      "questions": [
+        {
+          "id": "c_q1",
+          "question": "What are data types in C?",
+          "expected": [
+            "Define type of data stored",
+            "Determine memory size",
+            "Examples: int, char, float"
+          ]
+        },
+        {
+          "id": "c_q2",
+          "question": "Differentiate between signed and unsigned integers.",
+          "expected": [
+            "Signed stores positive and negative",
+            "Unsigned stores only positive",
+            "Unsigned has larger range"
+          ]
+        },
+        {
+          "id": "c_q3",
+          "question": "What is cyclic overflow in C?",
+          "expected": [
+            "Occurs when value exceeds range",
+            "Wraps around using modulo",
+            "Applies to integer types"
+          ]
+        },
+        {
+          "id": "c_q4",
+          "question": "Why does cyclic property not apply to float?",
+          "expected": [
+            "Floats use IEEE 754 format",
+            "Stored differently from integers",
+            "Overflow does not wrap around"
+          ]
+        },
+        {
+          "id": "c_q5",
+          "question": "Explain assignment operator behavior in C.",
+          "expected": [
+            "Assigns value to variable",
+            "Returns assigned value",
+            "Used inside expressions"
+          ]
+        },
+        {
+          "id": "c_q6",
+          "question": "How does modulus operator behave with negative numbers?",
+          "expected": [
+            "Operands must be integers",
+            "Result sign follows dividend",
+            "Example: -5 % 3 = -2"
+          ]
+        },
+        {
+          "id": "c_q7",
+          "question": "Differentiate between logical AND and bitwise AND.",
+          "expected": [
+            "Logical AND works on expressions",
+            "Bitwise AND works on bits",
+            "Logical AND uses short-circuiting"
+          ]
+        },
+        {
+          "id": "c_q8",
+          "question": "Explain left shift operator with an example.",
+          "expected": [
+            "Shifts bits to left",
+            "Multiplies value by 2ⁿ",
+            "Example: 1 << 3 = 8"
+          ]
+        },
+        {
+          "id": "c_q9",
+          "question": "Explain right shift operator.",
+          "expected": [
+            "Shifts bits to right",
+            "Divides value by 2ⁿ",
+            "Discards least significant bits"
+          ]
+        },
+        {
+          "id": "c_q10",
+          "question": "What is the purpose of sizeof operator?",
+          "expected": [
+            "Returns memory size in bytes",
+            "Evaluated at compile time",
+            "Works on data types and variables"
+          ]
+        },
+        {
+          "id": "c_q11",
+          "question": "Differentiate pre-increment and post-increment.",
+          "expected": [
+            "Pre-increment increments first",
+            "Post-increment uses value first",
+            "Difference affects expression result"
+          ]
+        },
+        {
+          "id": "c_q12",
+          "question": "What is short-circuit evaluation?",
+          "expected": [
+            "Second operand may not be evaluated",
+            "Occurs in logical AND/OR",
+            "Improves efficiency"
+          ]
+        },
+        {
+          "id": "c_q13",
+          "question": "Explain if-else syntax rules in C.",
+          "expected": [
+            "If block is mandatory",
+            "Else cannot exist alone",
+            "Only next statement executes without braces"
+          ]
+        },
+        {
+          "id": "c_q14",
+          "question": "When should a while loop be preferred over for loop?",
+          "expected": [
+            "Number of iterations unknown",
+            "Condition-based looping",
+            "Simpler loop control"
+          ]
+        },
+        {
+          "id": "c_q15",
+          "question": "Explain switch-case fall-through behavior.",
+          "expected": [
+            "Occurs when break is missing",
+            "Execution continues to next case",
+            "Used intentionally in some logic"
+          ]
         }
       ]
     }

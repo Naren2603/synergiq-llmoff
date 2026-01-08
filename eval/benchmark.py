@@ -16,6 +16,7 @@ from app.core.rag import build_or_load_index
 from app.core.storage import doc_dir, index_dir, save_doc_meta, save_doc_pages, save_status
 from app.core.summarize import chunk_text
 from app.core.summarizer import summarize_text
+from app.core.tts import generate_audio
 
 
 FIELDNAMES = [
@@ -29,10 +30,12 @@ FIELDNAMES = [
     "extract_s",
     "index_s",
     "summary_s",
+    "tts_s",
     "total_s",
     "extract_s_per_page",
     "index_s_per_page",
     "summary_s_per_page",
+    "tts_s_per_page",
     "index_s_per_chunk",
     "pages_per_sec",
     "index_mb",
@@ -57,7 +60,7 @@ def _safe_div(a: float, b: float) -> float:
     return a / b if b else 0.0
 
 
-def run_one(pdf_path: Path, *, do_summary: bool) -> dict:
+def run_one(pdf_path: Path, *, do_summary: bool, do_tts: bool) -> dict:
     doc_id = str(uuid.uuid4())
     save_status(doc_id, {"state": "benchmark", "step": "start"})
 
@@ -97,6 +100,7 @@ def run_one(pdf_path: Path, *, do_summary: bool) -> dict:
     summary_chars = 0
     compression_ratio = 0.0
     t_summary = 0.0
+    t_tts = 0.0
     if do_summary:
         t2 = time.perf_counter()
         save_status(doc_id, {"state": "benchmark", "step": "summarizing"})
@@ -105,14 +109,21 @@ def run_one(pdf_path: Path, *, do_summary: bool) -> dict:
         summary_chars = len(summary)
         compression_ratio = round(_safe_div(float(summary_chars), float(extracted_chars)), 6)
 
+        if do_tts:
+            t3 = time.perf_counter()
+            # Use detailed summary for TTS benchmarking.
+            audio_path = str(doc_dir(doc_id) / "bench_audio.mp3")
+            _ = generate_audio(summary, audio_path, use_edge=True)
+            t_tts = time.perf_counter() - t3
+
     idx_size = _dir_size_bytes(index_dir(doc_id))
     doc_size = _dir_size_bytes(doc_dir(doc_id))
 
-    total = t_extract + t_index + t_summary
+    total = t_extract + t_index + t_summary + t_tts
     save_status(doc_id, {"state": "benchmark", "step": "done"})
 
     pages_f = float(num_pages or 0)
-    total = t_extract + t_index + t_summary
+    total = t_extract + t_index + t_summary + t_tts
     pages_per_sec = round(_safe_div(pages_f, total), 4)
     return {
         "doc_id": doc_id,
@@ -125,10 +136,12 @@ def run_one(pdf_path: Path, *, do_summary: bool) -> dict:
         "extract_s": round(t_extract, 4),
         "index_s": round(t_index, 4),
         "summary_s": round(t_summary, 4),
+        "tts_s": round(t_tts, 4),
         "total_s": round(total, 4),
         "extract_s_per_page": round(_safe_div(t_extract, pages_f), 6),
         "index_s_per_page": round(_safe_div(t_index, pages_f), 6),
         "summary_s_per_page": round(_safe_div(t_summary, pages_f), 6),
+        "tts_s_per_page": round(_safe_div(t_tts, pages_f), 6),
         "index_s_per_chunk": round(_safe_div(t_index, float(num_chunks)), 6),
         "pages_per_sec": pages_per_sec,
         "index_mb": round(idx_size / (1024 * 1024), 3),
@@ -147,6 +160,7 @@ def save_plots(rows: list[dict], out_dir: Path) -> None:
     extract_s = [r["extract_s"] for r in rows]
     index_s = [r["index_s"] for r in rows]
     summary_s = [r["summary_s"] for r in rows]
+    tts_s = [r.get("tts_s", 0.0) for r in rows]
     pages_per_sec = [r.get("pages_per_sec", 0.0) for r in rows]
     chunks = [r.get("chunks", 0) for r in rows]
     index_s_per_page = [r.get("index_s_per_page", 0.0) for r in rows]
@@ -169,6 +183,9 @@ def save_plots(rows: list[dict], out_dir: Path) -> None:
     plt.bar(x, index_s, bottom=extract_s, label="Index")
     bottoms = [a + b for a, b in zip(extract_s, index_s)]
     plt.bar(x, summary_s, bottom=bottoms, label="Summarize")
+    bottoms2 = [a + b for a, b in zip(bottoms, summary_s)]
+    if any(float(v) > 0 for v in tts_s):
+        plt.bar(x, tts_s, bottom=bottoms2, label="TTS")
     plt.xticks(x, [str(p) for p in pages], rotation=0)
     plt.xlabel("Pages")
     plt.ylabel("Time (s)")
@@ -268,6 +285,7 @@ def main() -> None:
     ap.add_argument("pdf_dir", type=str, help="Folder containing PDFs")
     ap.add_argument("--out", type=str, default="eval/out", help="Output folder")
     ap.add_argument("--summary", action="store_true", help="Include summarization timing (requires Ollama model)")
+    ap.add_argument("--tts", action="store_true", help="Include TTS timing (runs only if --summary is also set)")
     ap.add_argument("--sleep", type=float, default=0.5, help="Sleep seconds between PDFs to reduce Ollama load")
     args = ap.parse_args()
 
@@ -290,7 +308,7 @@ def main() -> None:
     for p in pdfs:
         print(f"Benchmarking: {p}")
         try:
-            row = run_one(p, do_summary=bool(args.summary))
+            row = run_one(p, do_summary=bool(args.summary), do_tts=bool(args.tts) and bool(args.summary))
         except Exception as e:
             row = {k: 0 for k in FIELDNAMES}
             row["doc_id"] = ""

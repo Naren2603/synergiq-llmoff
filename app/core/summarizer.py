@@ -74,32 +74,48 @@ def summarize_text(text: str, mode: SummaryMode = "detailed") -> str:
     if not chunk_summaries:
         return "Failed to generate summary."
     
-    # If we have many chunk summaries, do a reduce phase
+    # If we have many chunk summaries, do a reduce phase.
+    # Use hierarchical reduction in small batches to avoid huge prompts/timeouts.
     if len(chunk_summaries) > 5:
-        print("Reducing intermediate summaries...")
-        combined = "\n\n".join(chunk_summaries)
-        
-        if mode == "brief":
-            reduce_prompt = f"""The following are summaries of different sections of a document. 
-Combine them into one brief, coherent summary (3-5 sentences):
-
-{combined}"""
-        else:
-            reduce_prompt = f"""The following are summaries of different sections of a document. 
-Combine them into one detailed, coherent summary that captures all key points:
-
-{combined}"""
-        
         system = (
             "You synthesize multiple summaries into a coherent whole in plain text. "
             "Do NOT use markdown (no headings, bullets, **bold**, ###, etc.)."
         )
+
+        def _reduce_batch(summaries: List[str]) -> str:
+            combined = "\n\n".join(summaries)
+            if mode == "brief":
+                reduce_prompt = (
+                    "The following are summaries of different sections of a document. "
+                    "Combine them into one brief, coherent summary (3-5 sentences):\n\n"
+                    f"{combined}"
+                )
+            else:
+                reduce_prompt = (
+                    "The following are summaries of different sections of a document. "
+                    "Combine them into one detailed, coherent summary that captures all key points:\n\n"
+                    f"{combined}"
+                )
+            return ollama_chat(reduce_prompt, system=system, temperature=0.3)
+
+        summaries = list(chunk_summaries)
         try:
-            final_summary = ollama_chat(reduce_prompt, system=system, temperature=0.3)
-            return final_summary
+            while len(summaries) > 5:
+                print(f"Reducing intermediate summaries... ({len(summaries)} parts)")
+                next_level: List[str] = []
+                for i in range(0, len(summaries), 5):
+                    batch = summaries[i : i + 5]
+                    try:
+                        next_level.append(_reduce_batch(batch))
+                    except Exception as e:
+                        print(f"Error reducing batch: {e}")
+                        next_level.append("\n\n".join(batch))
+                summaries = next_level
+
+            print(f"Final reduction... ({len(summaries)} parts)")
+            return _reduce_batch(summaries)
         except Exception as e:
             print(f"Error in reduce phase: {e}")
-            # Fallback to concatenation
             return "\n\n".join(chunk_summaries[:10])
     
     # If few chunks, just combine them

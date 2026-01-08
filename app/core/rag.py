@@ -11,6 +11,41 @@ from app.core.storage import index_dir
 from app.core.config import OLLAMA_BASE_URL, EMBED_MODEL
 
 
+def citations_from_evidence(evidence: List[dict], *, max_citations: int | None = None) -> List[str]:
+    """Build citation strings from retrieved evidence.
+
+    Citation rule (paper + code consistency):
+    - citations come from the top-k retrieved chunks actually sent to the LLM
+    - citations are unique (page, chunk) in first-occurrence order
+    - format: p{page}:c{chunk} when chunk is available, otherwise p{page}
+    """
+    seen: set[tuple[str, str]] = set()
+    out: List[str] = []
+
+    for ev in evidence:
+        meta = ev.get("metadata") or {}
+        page = meta.get("page")
+        chunk = meta.get("chunk")
+
+        page_s = "?" if page is None else str(page)
+        chunk_s = "" if chunk is None else str(chunk)
+
+        key = (page_s, chunk_s)
+        if key in seen:
+            continue
+        seen.add(key)
+
+        if chunk_s:
+            out.append(f"p{page_s}:c{chunk_s}")
+        else:
+            out.append(f"p{page_s}")
+
+        if max_citations is not None and len(out) >= max_citations:
+            break
+
+    return out
+
+
 def _embeddings() -> OllamaEmbeddings:
     # Keep chat and embedding models configurable separately.
     # If EMBED_MODEL isn't set, config falls back to OLLAMA_MODEL.
@@ -95,12 +130,14 @@ def answer_with_citations(question: str, evidence: List[dict]) -> tuple[str, Lis
     
     # Build context from evidence
     context_parts = []
-    sources = []
+    sources = citations_from_evidence(evidence)
     for i, ev in enumerate(evidence):
-        page = ev.get("metadata", {}).get("page", "?")
+        meta = ev.get("metadata") or {}
+        page = meta.get("page", "?")
+        chunk = meta.get("chunk")
+        label = f"Page {page}" if chunk is None else f"Page {page}, Chunk {chunk}"
         text = ev.get("text", "")
-        context_parts.append(f"[Source {i+1}, Page {page}]:\n{text}")
-        sources.append(f"p{page}")
+        context_parts.append(f"[Source {i+1}, {label}]:\n{text}")
     
     context = "\n\n".join(context_parts)
     

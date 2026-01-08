@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import os
+import json
+import time
 import uuid
 from pathlib import Path
 from fastapi import APIRouter, UploadFile, File, HTTPException, Query, BackgroundTasks
@@ -21,6 +23,7 @@ from app.core.summarizer import summarize_text
 from app.core.tts import generate_audio
 from app.core.video import generate_video
 from app.core.rag import build_or_load_index, load_faiss, retrieve, answer_with_citations
+from app.core.ollama_client import ollama_chat
 from pydantic import BaseModel
 
 router = APIRouter(prefix="/media", tags=["media"])
@@ -57,6 +60,12 @@ def _process_document(doc_id: str, filename: str) -> None:
         save_status(doc_id, {"state": "processing", "step": "building_vectorstore"})
         texts: list[str] = []
         metadatas: list[dict] = []
+        chunks_path = doc_dir(doc_id) / "chunks.jsonl"
+        try:
+            chunks_path.write_text("", encoding="utf-8")
+        except Exception:
+            pass
+
         for page_idx, page_text in enumerate(pages, start=1):
             if not page_text.strip():
                 continue
@@ -65,6 +74,22 @@ def _process_document(doc_id: str, filename: str) -> None:
                 if chunk.strip():
                     texts.append(chunk)
                     metadatas.append({"page": page_idx, "chunk": chunk_idx, "doc_id": doc_id})
+                    try:
+                        with chunks_path.open("a", encoding="utf-8") as f:
+                            f.write(
+                                json.dumps(
+                                    {
+                                        "page": page_idx,
+                                        "chunk": chunk_idx,
+                                        "text": chunk,
+                                        "char_len": len(chunk),
+                                    },
+                                    ensure_ascii=False,
+                                )
+                                + "\n"
+                            )
+                    except Exception:
+                        pass
         if texts:
             build_or_load_index(doc_id, texts, metadatas)
 
@@ -221,11 +246,39 @@ def get_video(doc_id: str):
 
 
 @router.post("/chat")
-def chat(req: ChatRequest):
-    """Chat with a document using RAG."""
+def chat(req: ChatRequest, mode: str = Query("rag", pattern="^(rag|no_rag)$")):
+    """Chat with a document.
+
+    mode=rag: retrieval-augmented answer + page:chunk citations
+    mode=no_rag: baseline answer without retrieval (sources=[])\
+    """
     meta = load_doc_meta(req.doc_id)
     if not meta:
         raise HTTPException(status_code=404, detail="Unknown doc_id. Upload a PDF first.")
+
+    t0 = time.perf_counter()
+
+    # No-RAG baseline: answer directly without document evidence.
+    if mode == "no_rag":
+        system = (
+            "You are a careful assistant. Answer the user's question. "
+            "If you do not know, say you don't know. Keep the answer concise."
+        )
+        answer = ollama_chat(req.question, system=system, temperature=0.2)
+        latency_s = time.perf_counter() - t0
+
+        _append_chat_log(
+            req.doc_id,
+            {
+                "mode": mode,
+                "question": req.question,
+                "latency_s": round(latency_s, 4),
+                "citations": [],
+                "evidence_preview": "",
+                "answer": answer,
+            },
+        )
+        return {"answer": answer, "sources": []}
     
     # Load vector store
     db = load_faiss(req.doc_id)
@@ -235,5 +288,35 @@ def chat(req: ChatRequest):
     # Retrieve evidence and generate answer
     evidence = retrieve(db, req.question)
     answer, sources = answer_with_citations(req.question, evidence)
+
+    latency_s = time.perf_counter() - t0
+    evidence_preview = " | ".join(
+        [
+            f"p{(ev.get('metadata') or {}).get('page','?')}: {(ev.get('text') or '')[:200].replace('\n', ' ')}"
+            for ev in evidence
+        ][:5]
+    )
+
+    _append_chat_log(
+        req.doc_id,
+        {
+            "mode": mode,
+            "question": req.question,
+            "latency_s": round(latency_s, 4),
+            "citations": sources,
+            "evidence_preview": evidence_preview,
+            "answer": answer,
+        },
+    )
     
     return {"answer": answer, "sources": sources}
+
+
+def _append_chat_log(doc_id: str, entry: dict) -> None:
+    try:
+        p = doc_dir(doc_id) / "chat_logs.jsonl"
+        with p.open("a", encoding="utf-8") as f:
+            f.write(json.dumps(entry, ensure_ascii=False) + "\n")
+    except Exception:
+        # Logging must never break the API.
+        return
